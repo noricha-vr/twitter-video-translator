@@ -1,0 +1,27 @@
+[project]
+name = "twitter-video-translator"
+version = "0.1.0"
+description = "Twitter動画を日本語に翻訳・字幕付き動画を生成するアプリケーション"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "yt-dlp>=2024.1.0",
+    "groq>=0.11.0",
+    "google-generativeai>=0.8.3",
+    "python-dotenv>=1.0.0",
+    "requests>=2.32.0",
+    "pydantic>=2.10.0",
+    "rich>=13.10.0",
+    "click>=8.1.0",
+    "ffmpeg-python>=0.2.0",
+    "gtts>=2.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "black>=24.10.0",
+    "ruff>=0.8.0",
+]
