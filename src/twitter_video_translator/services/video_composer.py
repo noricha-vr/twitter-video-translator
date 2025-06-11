@@ -19,40 +19,58 @@ class VideoComposer:
     def merge_audio_segments(
         self, segments: List[Dict[str, Any]], output_path: Path
     ) -> Path:
-        """音声セグメントを結合"""
+        """音声セグメントを結合（正しいタイミングで配置）"""
         console.print("[bold blue]音声セグメントを結合中...[/bold blue]")
 
-        # 音声ファイルリストを作成
-        concat_list = self.temp_dir / "concat_list.txt"
-        with open(concat_list, "w") as f:
-            for segment in segments:
-                if "audio_path" in segment and segment["audio_path"].exists():
-                    # 各セグメントの長さに合わせて音声を調整
-                    duration = segment["end"] - segment["start"]
-                    # 絶対パスを使用
-                    f.write(f"file '{segment['audio_path'].absolute()}'\n")
-                    f.write(f"duration {duration}\n")
+        # 音声ファイルがあるセグメントのみ抽出
+        audio_segments = [
+            seg for seg in segments
+            if "audio_path" in seg and seg["audio_path"].exists()
+        ]
+        
+        if not audio_segments:
+            raise ValueError("音声ファイルが見つかりません")
+
+        # 全体の長さを計算
+        total_duration = max(seg["end"] for seg in segments)
+
+        # FFmpegコマンドを構築
+        cmd = ["ffmpeg", "-y"]
+        
+        # 各音声ファイルを入力として追加
+        for seg in audio_segments:
+            cmd.extend(["-i", str(seg["audio_path"].absolute())])
+        
+        # フィルターグラフを構築
+        filter_parts = []
+        for i, seg in enumerate(audio_segments):
+            # 各音声の開始時刻をミリ秒単位で計算
+            delay_ms = int(seg["start"] * 1000)
+            filter_parts.append(f"[{i}:a]adelay={delay_ms}|{delay_ms}[a{i}]")
+        
+        # すべての音声をミックス
+        input_labels = "".join(f"[a{i}]" for i in range(len(audio_segments)))
+        filter_parts.append(f"{input_labels}amix=inputs={len(audio_segments)}:duration=longest[out]")
+        
+        filter_complex = ";".join(filter_parts)
+        
+        # フィルターグラフと出力設定を追加
+        cmd.extend([
+            "-filter_complex", filter_complex,
+            "-map", "[out]",
+            "-t", str(total_duration),  # 全体の長さを指定
+            "-ar", "44100",  # サンプリングレート
+            "-ac", "2",  # ステレオ
+            str(output_path)
+        ])
 
         # ffmpegで結合
         try:
-            cmd = [
-                "ffmpeg",
-                "-y",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                str(concat_list),
-                "-c",
-                "copy",
-                str(output_path),
-            ]
-            subprocess.run(cmd, check=True, capture_output=True)
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             console.print(f"[bold green]音声結合完了: {output_path}[/bold green]")
             return output_path
         except subprocess.CalledProcessError as e:
-            console.print(f"[bold red]音声結合エラー: {e.stderr.decode()}[/bold red]")
+            console.print(f"[bold red]音声結合エラー: {e.stderr}[/bold red]")
             raise
 
     def compose_video(
