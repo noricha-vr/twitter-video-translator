@@ -41,7 +41,11 @@ class TestIntegration:
         # モックの設定
         # yt-dlp
         mock_ydl_instance = MagicMock()
-        mock_ydl_instance.extract_info.return_value = {"formats": [{"ext": "mp4"}]}
+        mock_ydl_instance.extract_info.return_value = {
+            "formats": [{"ext": "mp4"}],
+            "ext": "mp4",
+            "_filename": str(tmp_path / "temp" / "original_video.mp4")
+        }
         mock_yt_dlp.return_value.__enter__.return_value = mock_ydl_instance
 
         # 動画ファイルを作成
