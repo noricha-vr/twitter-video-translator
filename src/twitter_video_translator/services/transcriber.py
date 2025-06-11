@@ -1,7 +1,7 @@
 """音声文字起こしサービス（Groq Whisper API）"""
 
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 import ffmpeg
 from groq import Groq
 from rich.console import Console
@@ -40,39 +40,116 @@ class AudioTranscriber:
             console.print(f"[bold red]音声抽出エラー: {str(e)}[/bold red]")
             raise
 
+    def split_audio(self, audio_path: Path, max_duration: int = 300) -> List[Path]:
+        """音声を分割（5分ごと）"""
+        import subprocess
+        import json
+        
+        # 音声の長さを取得
+        probe_cmd = [
+            "ffprobe",
+            "-v", "error",
+            "-show_format",
+            "-print_format", "json",
+            str(audio_path)
+        ]
+        
+        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        duration_info = json.loads(probe_result.stdout)
+        total_duration = float(duration_info["format"]["duration"])
+        
+        if total_duration <= max_duration:
+            return [audio_path]
+        
+        console.print(f"[yellow]音声が長いため分割します（{total_duration:.1f}秒）[/yellow]")
+        
+        # 分割数を計算
+        num_segments = int(total_duration / max_duration) + 1
+        segment_paths = []
+        
+        for i in range(num_segments):
+            start_time = i * max_duration
+            segment_path = self.temp_dir / f"audio_segment_{i}.wav"
+            
+            # ffmpegで分割
+            split_cmd = [
+                "ffmpeg",
+                "-i", str(audio_path),
+                "-ss", str(start_time),
+                "-t", str(max_duration),
+                "-acodec", "pcm_s16le",
+                "-ar", "16000",
+                "-ac", "1",
+                "-y",
+                str(segment_path)
+            ]
+            
+            subprocess.run(split_cmd, capture_output=True, check=True)
+            segment_paths.append(segment_path)
+            
+        console.print(f"[green]音声を{len(segment_paths)}個のセグメントに分割しました[/green]")
+        return segment_paths
+
     def transcribe_audio(self, audio_path: Path) -> Dict[str, Any]:
         """音声を文字起こし（Groq Whisper API）"""
         try:
             console.print("[bold blue]音声を文字起こし中...[/bold blue]")
-
-            # 音声ファイルを読み込み
-            with open(audio_path, "rb") as audio_file:
-                # Groq Whisper APIで文字起こし
-                transcription = self.client.audio.transcriptions.create(
-                    model=config.whisper_model,
-                    file=audio_file,
-                    language="en",  # 自動検出のため指定なし
-                    response_format="verbose_json",
-                    timestamp_granularities=["segment"],
-                )
+            
+            # ファイルサイズをチェック
+            file_size_mb = audio_path.stat().st_size / (1024 * 1024)
+            
+            if file_size_mb > 20:  # 20MB以上なら分割
+                audio_segments = self.split_audio(audio_path)
+            else:
+                audio_segments = [audio_path]
+            
+            all_segments = []
+            detected_language = None
+            full_text = []
+            
+            for i, segment_path in enumerate(audio_segments):
+                if len(audio_segments) > 1:
+                    console.print(f"[blue]セグメント {i+1}/{len(audio_segments)} を処理中...[/blue]")
+                
+                # 音声ファイルを読み込み
+                with open(segment_path, "rb") as audio_file:
+                    # Groq Whisper APIで文字起こし
+                    transcription = self.client.audio.transcriptions.create(
+                        model=config.whisper_model,
+                        file=audio_file,
+                        language="en",  # 自動検出のため指定なし
+                        response_format="verbose_json",
+                        timestamp_granularities=["segment"],
+                    )
+                
+                # 最初のセグメントから言語を取得
+                if detected_language is None:
+                    detected_language = transcription.language
+                
+                full_text.append(transcription.text)
+                
+                # セグメント情報を整理（時間をオフセット）
+                if hasattr(transcription, "segments"):
+                    time_offset = i * 300  # 5分ごとのオフセット
+                    for segment in transcription.segments:
+                        all_segments.append(
+                            {
+                                "start": segment["start"] + time_offset,
+                                "end": segment["end"] + time_offset,
+                                "text": segment["text"].strip(),
+                            }
+                        )
+                
+                # 一時ファイルを削除
+                if segment_path != audio_path:
+                    segment_path.unlink()
 
             # 結果を辞書形式に変換
             result = {
-                "text": transcription.text,
-                "language": transcription.language,
-                "segments": [],
+                "text": " ".join(full_text),
+                "language": detected_language,
+                "segments": all_segments,
             }
-
-            # セグメント情報を整理
-            if hasattr(transcription, "segments"):
-                for segment in transcription.segments:
-                    result["segments"].append(
-                        {
-                            "start": segment["start"],
-                            "end": segment["end"],
-                            "text": segment["text"].strip(),
-                        }
-                    )
 
             console.print(
                 f"[bold green]文字起こし完了（言語: {result['language']}）[/bold green]"
