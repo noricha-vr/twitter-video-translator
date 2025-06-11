@@ -1,6 +1,7 @@
 """翻訳サービス（Gemini API）"""
 
 from typing import List, Dict, Any
+import time
 import google.generativeai as genai
 from rich.console import Console
 from ..config import config
@@ -41,6 +42,10 @@ class TextTranslator:
 {chr(10).join(texts_to_translate)}"""
 
             try:
+                # レート制限を考慮して遅延を追加
+                if i > 0:
+                    time.sleep(1)  # 1秒待機
+                
                 # Geminiで翻訳
                 response = self.model.generate_content(prompt)
                 translated_text = response.text
