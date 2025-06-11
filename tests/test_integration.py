@@ -13,7 +13,7 @@ class TestIntegration:
     @patch("src.twitter_video_translator.services.downloader.yt_dlp.YoutubeDL")
     @patch("src.twitter_video_translator.services.transcriber.Groq")
     @patch("src.twitter_video_translator.services.translator.genai.GenerativeModel")
-    @patch("gtts.gTTS")
+    @patch("src.twitter_video_translator.services.tts.genai.Client")
     @patch("src.twitter_video_translator.services.video_composer.subprocess.run")
     @patch("src.twitter_video_translator.services.video_composer.ffmpeg")
     @patch("src.twitter_video_translator.services.transcriber.ffmpeg")
@@ -22,7 +22,7 @@ class TestIntegration:
         mock_transcriber_ffmpeg,
         mock_composer_ffmpeg,
         mock_subprocess,
-        mock_gtts,
+        mock_genai_client,
         mock_genai,
         mock_groq,
         mock_yt_dlp,
@@ -71,9 +71,9 @@ class TestIntegration:
         mock_genai_instance.generate_content.return_value = mock_response
         mock_genai.return_value = mock_genai_instance
 
-        # gTTS
-        mock_gtts_instance = MagicMock()
-        mock_gtts.return_value = mock_gtts_instance
+        # Gemini Client
+        mock_genai_client_instance = MagicMock()
+        mock_genai_client.return_value = mock_genai_client_instance
 
         # ffmpeg
         mock_transcriber_ffmpeg.input.return_value = MagicMock()

@@ -63,7 +63,7 @@ class TwitterVideoTranslatorCLI:
             if use_tts:
                 segments_with_audio = self.tts.generate_speech(translated_segments)
                 if any("audio_path" in seg for seg in segments_with_audio):
-                    audio_file = config.temp_dir / "translated_audio.mp3"
+                    audio_file = config.temp_dir / "translated_audio.wav"
                     self.composer.merge_audio_segments(segments_with_audio, audio_file)
 
             # 7. 動画合成

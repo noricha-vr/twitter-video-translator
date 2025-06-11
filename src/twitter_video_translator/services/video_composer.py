@@ -83,11 +83,11 @@ class VideoComposer:
                 audio_stream = input_video.audio
 
             # 字幕フィルターを適用
-            # 日本語フォントの指定
+            # 日本語フォントの指定（FontSize=15は元のサイズの約60%）
             video_stream = video_stream.filter(
                 "subtitles",
                 str(subtitle_file),
-                force_style="FontName=Hiragino Sans,FontSize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2",
+                force_style="FontName=Hiragino Sans,FontSize=15,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2",
             )
 
             # 出力
