@@ -29,7 +29,8 @@ class VideoComposer:
                 if "audio_path" in segment and segment["audio_path"].exists():
                     # 各セグメントの長さに合わせて音声を調整
                     duration = segment["end"] - segment["start"]
-                    f.write(f"file '{segment['audio_path']}'\n")
+                    # 絶対パスを使用
+                    f.write(f"file '{segment['audio_path'].absolute()}'\n")
                     f.write(f"duration {duration}\n")
 
         # ffmpegで結合
