@@ -61,6 +61,7 @@ scripts/*.wav
 
 # Logs
 *.log
+logs/
 
 # uv
 .python-version
