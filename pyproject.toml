@@ -1,7 +1,7 @@
 [project]
 name = "twitter-video-translator"
-version = "0.1.0"
-description = "Twitter動画を日本語に翻訳・字幕付き動画を生成するアプリケーション"
+version = "0.2.0"
+description = "Twitter/YouTube動画を日本語に翻訳・字幕付き動画を生成するアプリケーション"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

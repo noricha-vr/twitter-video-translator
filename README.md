@@ -1,17 +1,17 @@
 # Twitter Video Translator
 
-Twitter/X の動画を自動的に日本語に翻訳し、字幕と音声を追加するツール
+Twitter/X およびYouTubeの動画を自動的に日本語に翻訳し、字幕と音声を追加するツール
 
 [![Python](https://img.shields.io/badge/Python-3.13%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## 🎥 概要
 
-このツールは、Twitter/X の動画を自動的にダウンロードし、音声を文字起こしして日本語に翻訳、字幕と日本語音声を追加した動画を生成します。
+このツールは、Twitter/X およびYouTubeの動画を自動的にダウンロードし、音声を文字起こしして日本語に翻訳、字幕と日本語音声を追加した動画を生成します。
 
 ### 主な機能
 
-- 🔽 **動画ダウンロード**: Twitter/X のURLから動画を自動ダウンロード
+- 🔽 **動画ダウンロード**: Twitter/X およびYouTubeのURLから動画を自動ダウンロード
 - 🎤 **音声文字起こし**: Groq Whisper APIを使用した高精度な文字起こし
 - 🌐 **自動翻訳**: Google Gemini APIによる自然な日本語翻訳
 - 🗣️ **音声生成**: gTTSによる日本語音声の生成
@@ -59,8 +59,11 @@ GEMINI_API_KEY=your_gemini_api_key_here
 ### 基本的な使用方法
 
 ```bash
-# 字幕と音声を追加（デフォルト）
+# Twitter/Xの動画を翻訳
 uv run python main.py https://x.com/user/status/123456789
+
+# YouTubeの動画を翻訳
+uv run python main.py https://www.youtube.com/watch?v=VIDEO_ID
 ```
 
 ### オプション
@@ -79,8 +82,14 @@ uv run python main.py --help
 ### 使用例
 
 ```bash
-# 実際のTwitter動画URLの例
+# Twitter動画URLの例
 uv run python main.py "https://x.com/yuriyurii_329/status/1927560473450561910"
+
+# YouTube動画URLの例
+uv run python main.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+# YouTubeショート動画URLの例  
+uv run python main.py "https://youtube.com/shorts/VIDEO_ID"
 ```
 
 ## 📁 ディレクトリ構造
@@ -150,7 +159,7 @@ uv run python scripts/test_local_video.py
 
 ### 対応フォーマット
 
-- **入力**: Twitter/X の動画（mp4, webm, mkv等）
+- **入力**: Twitter/X およびYouTubeの動画（mp4, webm, mkv等）
 - **出力**: MP4形式（H.264ビデオ、AAC音声）
 - **字幕**: SRT形式
 
