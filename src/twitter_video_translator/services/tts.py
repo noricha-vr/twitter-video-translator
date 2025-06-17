@@ -5,12 +5,13 @@ import struct
 import mimetypes
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from google import genai
+import google.genai as genai
 from google.genai import types
 from rich.console import Console
 from ..config import config
 from ..models.tts import TTSRequest, TTSResult
 from ..models.transcription import SubtitleSegment
+from .audio_style_analyzer import AudioStyleAnalyzer
 
 console = Console()
 
@@ -22,6 +23,7 @@ class TextToSpeech:
         self.client = genai.Client(api_key=config.gemini_api_key)
         self.model = "gemini-2.5-flash-preview-tts"
         self.voice_name = config.tts_voice  # 設定から音声を取得
+        self.style_analyzer = AudioStyleAnalyzer()
 
     def convert_to_wav(self, audio_data: bytes, mime_type: str) -> bytes:
         """WAVファイルヘッダーを生成して音声データに追加"""
@@ -78,14 +80,74 @@ class TextToSpeech:
 
         return {"bits_per_sample": bits_per_sample, "rate": rate}
 
-    async def generate_speech_segment(self, text: str, output_path: Path) -> Optional[Path]:
-        """単一セグメントの音声生成"""
+    async def generate_speech_segment(
+        self, 
+        text: str, 
+        output_path: Path,
+        style_params: Optional[Dict[str, Any]] = None
+    ) -> Optional[Path]:
+        """単一セグメントの音声生成
+        
+        Args:
+            text: 生成するテキスト
+            output_path: 出力パス
+            style_params: 音声スタイルパラメータ（オプション）
+        """
         try:
+            # スタイル情報からプロンプトを構築
+            style_prompt = ""
+            if style_params:
+                style = style_params.get("style", "neutral")
+                intensity = style_params.get("style_intensity", "moderate")
+                speed = style_params.get("speed", 1.0)
+                
+                # スタイルの説明を日本語で追加
+                style_descriptions = {
+                    "cheerful": "明るく楽しそうに",
+                    "sad": "悲しそうに",
+                    "angry": "怒っているように",
+                    "worried": "心配そうに",
+                    "excited": "興奮して",
+                    "dissatisfied": "不満そうに",
+                    "confident": "自信を持って",
+                    "neutral": "普通に"
+                }
+                
+                style_desc = style_descriptions.get(style, "普通に")
+                
+                # 強度の説明
+                intensity_descriptions = {
+                    "weak": "少し",
+                    "moderate": "",
+                    "strong": "とても"
+                }
+                intensity_desc = intensity_descriptions.get(intensity, "")
+                
+                # 速度の説明
+                speed_desc = ""
+                if speed is not None and speed < 0.8:
+                    speed_desc = "ゆっくりと"
+                elif speed is not None and speed > 1.2:
+                    speed_desc = "速く"
+                
+                # スタイルプロンプトを構築
+                style_parts = []
+                if intensity_desc:
+                    style_parts.append(intensity_desc)
+                style_parts.append(style_desc)
+                if speed_desc:
+                    style_parts.append(speed_desc)
+                
+                style_prompt = f"以下のテキストを{''.join(style_parts)}読み上げてください：\n\n"
+            
+            # プロンプトとテキストを結合
+            full_text = style_prompt + text if style_prompt else text
+            
             contents = [
                 types.Content(
                     role="user",
                     parts=[
-                        types.Part.from_text(text=text),
+                        types.Part.from_text(text=full_text),
                     ],
                 ),
             ]
@@ -136,13 +198,19 @@ class TextToSpeech:
             return None
 
     async def generate_speech_for_segments(
-        self, segments: List[SubtitleSegment], translated_texts: Optional[List[str]] = None
+        self, 
+        segments: List[SubtitleSegment], 
+        translated_texts: Optional[List[str]] = None,
+        audio_path: Optional[Path] = None,
+        analyze_style: bool = True
     ) -> TTSResult:
         """セグメントごとに音声を生成
         
         Args:
             segments: 字幕セグメントのリスト
             translated_texts: 翻訳されたテキストのリスト（オプション）
+            audio_path: 元の音声ファイルのパス（スタイル分析用）
+            analyze_style: 音声スタイルを分析するかどうか
         """
         console.print("[bold blue]日本語音声を生成中...[/bold blue]")
 
@@ -152,10 +220,55 @@ class TextToSpeech:
         segments_data = []
         tasks = []
         full_text_parts = []
+        
+        # 音声スタイル分析（必要な場合）
+        style_params_cache = {}
+        if analyze_style and audio_path and audio_path.exists():
+            console.print("[bold blue]音声スタイルを分析中...[/bold blue]")
+            
+            # 各セグメントの音声スタイルを分析
+            for idx, segment in enumerate(segments):
+                try:
+                    # セグメントの音声を抽出（ffmpegを使用）
+                    segment_audio_path = config.temp_dir / f"segment_style_{idx:04d}.wav"
+                    
+                    import subprocess
+                    extract_cmd = [
+                        "ffmpeg",
+                        "-i", str(audio_path),
+                        "-ss", str(segment.start_time),
+                        "-t", str(segment.end_time - segment.start_time),
+                        "-acodec", "pcm_s16le",
+                        "-ar", "16000",
+                        "-ac", "1",
+                        "-y",
+                        str(segment_audio_path)
+                    ]
+                    
+                    result = subprocess.run(extract_cmd, capture_output=True)
+                    if result.returncode == 0 and segment_audio_path.exists():
+                        # スタイル分析を実行
+                        analysis = await self.style_analyzer.analyze_audio_style(
+                            segment_audio_path,
+                            segment.text,  # 文字起こしされたテキストを使用
+                            segment
+                        )
+                        
+                        # TTSスタイルパラメータに変換
+                        style_params = self.style_analyzer.convert_to_tts_style(analysis)
+                        style_params_cache[idx] = style_params
+                        
+                        # 一時ファイルを削除
+                        segment_audio_path.unlink()
+                        
+                        console.print(f"[green]セグメント{idx}のスタイル分析完了: {analysis['summary']}[/green]")
+                    
+                except Exception as e:
+                    console.print(f"[yellow]セグメント{idx}のスタイル分析失敗: {str(e)}[/yellow]")
 
         # 各セグメントの音声生成タスクを作成
         for idx, segment in enumerate(segments):
-            audio_path = config.temp_dir / f"segment_{idx:04d}.wav"
+            segment_audio_path = config.temp_dir / f"segment_{idx:04d}.wav"
             
             # テキストを決定（翻訳テキストがあればそれを使用）
             if translated_texts and idx < len(translated_texts):
@@ -164,10 +277,13 @@ class TextToSpeech:
                 text = segment.text
             
             full_text_parts.append(text)
+            
+            # スタイルパラメータを取得（なければデフォルト）
+            style_params = style_params_cache.get(idx)
 
             # 非同期タスクを作成
-            task = self.generate_speech_segment(text, audio_path)
-            tasks.append((idx, segment, audio_path, task, text))
+            task = self.generate_speech_segment(text, segment_audio_path, style_params)
+            tasks.append((idx, segment, segment_audio_path, task, text))
 
         # すべてのタスクを並列実行
         for idx, segment, audio_path, task, text in tasks:
@@ -211,15 +327,27 @@ class TextToSpeech:
             metadata={"audio_files": [str(f) for f in audio_files]}
         )
 
-    def generate_speech(self, segments: List[SubtitleSegment], translated_texts: Optional[List[str]] = None) -> TTSResult:
+    def generate_speech(
+        self, 
+        segments: List[SubtitleSegment], 
+        translated_texts: Optional[List[str]] = None,
+        audio_path: Optional[Path] = None,
+        analyze_style: bool = True
+    ) -> TTSResult:
         """同期的に音声を生成（メインエントリポイント）
         
         Args:
             segments: 字幕セグメントのリスト
             translated_texts: 翻訳されたテキストのリスト（オプション）
+            audio_path: 元の音声ファイルのパス（スタイル分析用）
+            analyze_style: 音声スタイルを分析するかどうか
         """
         # 非同期関数を同期的に実行
-        return asyncio.run(self.generate_speech_for_segments(segments, translated_texts))
+        return asyncio.run(
+            self.generate_speech_for_segments(
+                segments, translated_texts, audio_path, analyze_style
+            )
+        )
     
     async def generate_async(self, request: TTSRequest) -> TTSResult:
         """TTSRequestから音声を生成（非同期）"""

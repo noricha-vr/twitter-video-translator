@@ -81,7 +81,15 @@ class VideoTranslatorCLI:
             audio_file = None
             if use_tts:
                 logger.info("音声生成開始")
-                tts_result = self.tts.generate_speech(translated_segments)
+                # 翻訳されたテキストを抽出
+                translated_texts = [seg.text for seg in translated_segments]
+                # 音声スタイル分析を有効にして音声生成
+                tts_result = self.tts.generate_speech(
+                    transcription.segments,  # 元の文字起こしセグメント
+                    translated_texts,        # 翻訳されたテキスト
+                    audio_path,             # 元の音声ファイル
+                    analyze_style=True      # スタイル分析を有効化
+                )
                 if tts_result.segments and any("audio_path" in seg for seg in tts_result.segments):
                     audio_file = config.temp_dir / "translated_audio.wav"
                     # segmentsをPath型を含む辞書に変換（キー名も変換）
