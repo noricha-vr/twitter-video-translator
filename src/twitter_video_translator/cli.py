@@ -26,7 +26,8 @@ class VideoTranslatorCLI:
         self.composer = VideoComposer()
         self.subtitle_gen = SubtitleGenerator()
 
-    def run(self, url: str, output_path: Path = None, use_tts: bool = True):
+    def run(self, url: str, output_path: Path = None, use_tts: bool = True, 
+             original_volume: float = 0.15, japanese_volume: float = 1.8):
         """メイン処理"""
         try:
             logger.info(f"処理開始: URL={url}")
@@ -107,7 +108,9 @@ class VideoTranslatorCLI:
 
             logger.info("動画合成開始")
             final_video = self.composer.compose_video(
-                video_path, subtitle_path, audio_file, output_path
+                video_path, subtitle_path, audio_file, output_path,
+                original_volume=original_volume,
+                japanese_volume=japanese_volume
             )
             logger.info(f"動画合成完了: {final_video}")
 
@@ -134,10 +137,24 @@ class VideoTranslatorCLI:
     "-o", "--output", type=click.Path(path_type=Path), help="出力ファイルパス"
 )
 @click.option("--no-tts", is_flag=True, help="音声生成をスキップ（字幕のみ）")
-def main(url: str, output: Path = None, no_tts: bool = False):
+@click.option(
+    "--original-volume", 
+    type=float, 
+    default=0.15, 
+    help="元の音声のボリューム（0.0-1.0、デフォルト: 0.15 = 15%）"
+)
+@click.option(
+    "--japanese-volume", 
+    type=float, 
+    default=1.8, 
+    help="日本語音声のボリューム倍率（デフォルト: 1.8 = +80%）"
+)
+def main(url: str, output: Path = None, no_tts: bool = False, 
+         original_volume: float = 0.15, japanese_volume: float = 1.8):
     """動画を日本語に翻訳します（Twitter/YouTube対応）"""
     cli = VideoTranslatorCLI()
-    cli.run(url, output, use_tts=not no_tts)
+    cli.run(url, output, use_tts=not no_tts, 
+            original_volume=original_volume, japanese_volume=japanese_volume)
 
 
 if __name__ == "__main__":
