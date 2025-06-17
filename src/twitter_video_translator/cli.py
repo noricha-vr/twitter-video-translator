@@ -6,7 +6,15 @@ from rich.console import Console
 from rich.panel import Panel
 
 from .config import config
-from .constants import AVAILABLE_VOICES, SUPPORTED_LANGUAGES, RECOMMENDED_JAPANESE_VOICES
+from .constants import (
+    AVAILABLE_VOICES, 
+    ALL_SUPPORTED_LANGUAGES,
+    SUPPORTED_LANGUAGES, 
+    RECOMMENDED_JAPANESE_VOICES,
+    TTS_SUPPORTED_LANGUAGES,
+    TRANSLATION_ONLY_LANGUAGES,
+    LANGUAGE_CODES
+)
 from .services.downloader import VideoDownloader
 from .services.transcriber import AudioTranscriber
 from .services.translator import TextTranslator
@@ -81,6 +89,12 @@ class VideoTranslatorCLI:
 
             # 6. 音声生成（オプション）
             audio_file = None
+            # TTSがサポートしていない言語の場合は自動的に無効化
+            if target_language in TRANSLATION_ONLY_LANGUAGES:
+                logger.info(f"{target_language}はTTSをサポートしていません。字幕のみ生成します。")
+                console.print(f"[yellow]注意: {target_language}はTTSをサポートしていないため、字幕のみ生成されます。[/yellow]")
+                use_tts = False
+            
             if use_tts:
                 logger.info(f"音声生成開始: 音声={voice}")
                 # TTSを初期化（音声パラメータを設定）
@@ -125,20 +139,8 @@ class VideoTranslatorCLI:
                     if safe_title:
                         original_filename = safe_title
                 
-                # 言語コードを短縮形に変換
-                lang_codes = {
-                    "Japanese": "ja",
-                    "English": "en",
-                    "Chinese": "zh",
-                    "Spanish": "es",
-                    "French": "fr",
-                    "German": "de",
-                    "Italian": "it",
-                    "Portuguese": "pt",
-                    "Russian": "ru",
-                    "Korean": "ko"
-                }
-                lang_code = lang_codes.get(target_language, target_language[:2].lower())
+                # 言語コードを取得
+                lang_code = LANGUAGE_CODES.get(target_language, target_language[:2].lower())
                 output_path = config.output_dir / f"{original_filename}_{lang_code}.mp4"
             
             logger.info(f"出力ファイル名: {output_path}")
@@ -186,6 +188,20 @@ class CustomCommand(click.Command):
         with formatter.indentation():
             for voice, desc in AVAILABLE_VOICES.items():
                 formatter.write_text(f"{voice}: {desc}")
+        
+        formatter.write("\n")
+        formatter.write_heading("サポート言語 (--target-language/-l)")
+        formatter.write_text("TTSは以下の24言語をサポートしています：")
+        with formatter.indentation():
+            for lang, (code, display_name) in TTS_SUPPORTED_LANGUAGES.items():
+                formatter.write_text(f"{lang}: {display_name} ({code})")
+        
+        if TRANSLATION_ONLY_LANGUAGES:
+            formatter.write("\n")
+            formatter.write_text("翻訳のみサポート（字幕のみ生成）：")
+            with formatter.indentation():
+                for lang in TRANSLATION_ONLY_LANGUAGES:
+                    formatter.write_text(f"{lang}: 字幕のみ対応")
 
 
 @click.command(cls=CustomCommand)
@@ -196,9 +212,9 @@ class CustomCommand(click.Command):
 @click.option("--no-tts", is_flag=True, help="音声生成をスキップ（字幕のみ）")
 @click.option(
     "-l", "--target-language",
-    type=click.Choice(SUPPORTED_LANGUAGES),
+    type=click.Choice(ALL_SUPPORTED_LANGUAGES),
     default="Japanese",
-    help="翻訳先の言語"
+    help="翻訳先の言語（中国語は字幕のみ）"
 )
 @click.option(
     "-v", "--voice",

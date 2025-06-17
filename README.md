@@ -165,11 +165,40 @@ video-translator <URL> -o translated_video.mp4
 
 ### 🌍 多言語対応
 
-本ツールは30以上の言語への翻訳に対応しています：
+本ツールはGemini TTSがサポートする24言語への翻訳に対応しています：
 
-**主要言語**: Japanese, English, Chinese, Spanish, French, German, Italian, Portuguese, Russian, Korean
+**アジア言語**:
+- Japanese (日本語) - `ja-JP`
+- Korean (韓国語) - `ko-KR`
+- Chinese - サポート外（字幕のみ対応）
+- Indonesian (インドネシア語) - `id-ID`
+- Thai (タイ語) - `th-TH`
+- Vietnamese (ベトナム語) - `vi-VN`
 
-**その他の対応言語**: Arabic, Hindi, Turkish, Polish, Dutch, Swedish, Danish, Norwegian, Finnish, Czech, Greek, Hebrew, Indonesian, Malay, Thai, Vietnamese, Filipino, Bengali, Tamil, Telugu, Urdu
+**インド言語**:
+- Hindi (ヒンディー語) - `hi-IN`
+- Bengali (ベンガル語) - `bn-BD`
+- Tamil (タミル語) - `ta-IN`
+- Telugu (テルグ語) - `te-IN`
+- Marathi (マラーティー語) - `mr-IN`
+- English_India (インド英語) - `en-IN`
+
+**ヨーロッパ言語**:
+- English (英語) - `en-US`
+- Spanish (スペイン語) - `es-US`
+- French (フランス語) - `fr-FR`
+- German (ドイツ語) - `de-DE`
+- Italian (イタリア語) - `it-IT`
+- Portuguese (ポルトガル語) - `pt-BR`
+- Russian (ロシア語) - `ru-RU`
+- Polish (ポーランド語) - `pl-PL`
+- Dutch (オランダ語) - `nl-NL`
+- Romanian (ルーマニア語) - `ro-RO`
+- Turkish (トルコ語) - `tr-TR`
+- Ukrainian (ウクライナ語) - `uk-UA`
+
+**中東言語**:
+- Arabic (アラビア語エジプト方言) - `ar-EG`
 
 ### 🎤 音声オプション
 
