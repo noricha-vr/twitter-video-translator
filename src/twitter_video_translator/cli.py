@@ -40,7 +40,7 @@ class VideoTranslatorCLI:
             config.temp_dir.mkdir(exist_ok=True)
             
             # APIキーの検証
-            config.validate_api_keys()
+            config.validate_all()
 
             console.print(
                 Panel.fit(
@@ -63,12 +63,12 @@ class VideoTranslatorCLI:
             # 3. 文字起こし
             logger.info("文字起こし開始")
             transcription = self.transcriber.transcribe_audio(audio_path)
-            logger.info(f"文字起こし完了: 言語={transcription['language']}, セグメント数={len(transcription['segments'])}")
+            logger.info(f"文字起こし完了: 言語={transcription.language}, セグメント数={len(transcription.segments)}")
 
             # 4. 翻訳
             logger.info("翻訳開始")
             translated_segments = self.translator.translate_segments(
-                transcription["segments"], transcription["language"]
+                transcription.segments, transcription.language
             )
             logger.info(f"翻訳完了: セグメント数={len(translated_segments)}")
 
@@ -81,10 +81,20 @@ class VideoTranslatorCLI:
             audio_file = None
             if use_tts:
                 logger.info("音声生成開始")
-                segments_with_audio = self.tts.generate_speech(translated_segments)
-                if any("audio_path" in seg for seg in segments_with_audio):
+                tts_result = self.tts.generate_speech(translated_segments)
+                if tts_result.segments and any("audio_path" in seg for seg in tts_result.segments):
                     audio_file = config.temp_dir / "translated_audio.wav"
-                    self.composer.merge_audio_segments(segments_with_audio, audio_file)
+                    # segmentsをPath型を含む辞書に変換（キー名も変換）
+                    segments_for_merge = []
+                    for seg in tts_result.segments:
+                        seg_dict = {
+                            "start": seg["start_time"],
+                            "end": seg["end_time"],
+                            "text": seg["text"],
+                            "audio_path": Path(seg["audio_path"])
+                        }
+                        segments_for_merge.append(seg_dict)
+                    self.composer.merge_audio_segments(segments_for_merge, audio_file)
                     logger.info(f"音声生成完了: {audio_file}")
             else:
                 logger.info("音声生成スキップ")
@@ -102,7 +112,7 @@ class VideoTranslatorCLI:
                     if safe_title:
                         original_filename = safe_title
                 
-                output_path = config.work_dir / f"{original_filename}_ja.mp4"
+                output_path = config.output_dir / f"{original_filename}_ja.mp4"
             
             logger.info(f"出力ファイル名: {output_path}")
 

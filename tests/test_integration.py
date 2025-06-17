@@ -34,7 +34,7 @@ class TestIntegration:
         test_config = Config(
             groq_api_key="test_key",
             gemini_api_key="test_key",
-            work_dir=tmp_path / "work",
+            output_dir=tmp_path / "output",
             temp_dir=tmp_path / "temp",
         )
 

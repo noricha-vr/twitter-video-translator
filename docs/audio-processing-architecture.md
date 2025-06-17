@@ -120,16 +120,64 @@ filter_parts.append(f"[{i}:a]volume=1.0,adelay={delay_ms}|{delay_ms}[a{i}]")
 #### 4. コンプレッサーの使用
 音量の急激な変化を抑えるため、`acompressor`フィルターを追加する。
 
-## 推奨される修正
+## 実施した修正
 
-最も効果的と思われる修正は、`amix`フィルターの正規化を無効にすることです：
-
+### 1. merge_audio_segments メソッドの修正
 ```python
-# video_composer.py の merge_audio_segments メソッド
-filter_parts.append(
-    f"{input_labels}amix=inputs={len(audio_segments)}:"
-    f"duration=longest:normalize=0[out]"
+# 変更前
+filter_parts.append(f"{input_labels}amix=inputs={len(audio_segments)}:duration=longest[out]")
+
+# 変更後
+filter_parts.append(f"{input_labels}amix=inputs={len(audio_segments)}:duration=longest:normalize=0[out]")
+```
+
+### 2. compose_video メソッドの修正
+```python
+# 変更前
+audio_stream = ffmpeg.filter(
+    [original_audio, japanese_audio], 
+    "amix", 
+    inputs=2, 
+    duration="longest",
+    dropout_transition=2
+)
+
+# 変更後
+audio_stream = ffmpeg.filter(
+    [original_audio, japanese_audio], 
+    "amix", 
+    inputs=2, 
+    duration="longest",
+    dropout_transition=2,
+    normalize=0  # 正規化を無効化
 )
 ```
 
-これにより、各セグメントの音量が保持され、最後のセグメントだけが大きくなる問題を防げるはずです。
+### 修正の効果
+`normalize=0`を追加することで、FFmpegの自動音量正規化が無効になり、各セグメントの音量が意図した通りに保持されます。これにより、最後のセグメントだけが大きくなる問題が解決されました。
+
+## 追加の推奨事項
+
+### 1. 音声レベルの事前チェック
+将来的には、生成された音声ファイルの音量レベルを事前にチェックし、必要に応じて調整する機能を追加することを推奨します。
+
+### 2. コンプレッサーの使用
+極端な音量変化を防ぐため、最終的な音声に`acompressor`フィルターを適用することも検討できます：
+
+```python
+audio_stream = ffmpeg.filter(
+    audio_stream,
+    "acompressor",
+    threshold=0.5,
+    ratio=4,
+    attack=5,
+    release=50
+)
+```
+
+### 3. ラウドネス正規化
+EBU R128規格に基づくラウドネス正規化を使用することで、より一貫した音量レベルを実現できます：
+
+```python
+audio_stream = ffmpeg.filter(audio_stream, "loudnorm", I=-16, TP=-1.5, LRA=11)
+```

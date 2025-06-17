@@ -1,11 +1,12 @@
 """音声文字起こしサービス（Groq Whisper API）"""
 
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import List
 import ffmpeg
 from groq import Groq
 from rich.console import Console
 from ..config import config
+from ..models.transcription import TranscriptionResult, SubtitleSegment
 
 console = Console()
 
@@ -90,7 +91,7 @@ class AudioTranscriber:
         console.print(f"[green]音声を{len(segment_paths)}個のセグメントに分割しました[/green]")
         return segment_paths
 
-    def transcribe_audio(self, audio_path: Path) -> Dict[str, Any]:
+    def transcribe_audio(self, audio_path: Path) -> TranscriptionResult:
         """音声を文字起こし（Groq Whisper API）"""
         try:
             console.print("[bold blue]音声を文字起こし中...[/bold blue]")
@@ -103,9 +104,10 @@ class AudioTranscriber:
             else:
                 audio_segments = [audio_path]
             
-            all_segments = []
+            all_segments: List[SubtitleSegment] = []
             detected_language = None
             full_text = []
+            total_duration = 0.0
             
             for i, segment_path in enumerate(audio_segments):
                 if len(audio_segments) > 1:
@@ -132,30 +134,53 @@ class AudioTranscriber:
                 if hasattr(transcription, "segments"):
                     time_offset = i * 300  # 5分ごとのオフセット
                     for segment in transcription.segments:
-                        all_segments.append(
-                            {
-                                "start": segment["start"] + time_offset,
-                                "end": segment["end"] + time_offset,
-                                "text": segment["text"].strip(),
-                            }
+                        subtitle_segment = SubtitleSegment(
+                            start_time=segment["start"] + time_offset,
+                            end_time=segment["end"] + time_offset,
+                            text=segment["text"].strip(),
+                            confidence=segment.get("confidence")
                         )
+                        all_segments.append(subtitle_segment)
+                        # 最大のend_timeを追跡
+                        if subtitle_segment.end_time > total_duration:
+                            total_duration = subtitle_segment.end_time
                 
                 # 一時ファイルを削除
                 if segment_path != audio_path:
                     segment_path.unlink()
 
-            # 結果を辞書形式に変換
-            result = {
-                "text": " ".join(full_text),
-                "language": detected_language,
-                "segments": all_segments,
-            }
+            # TranscriptionResultオブジェクトを作成
+            result = TranscriptionResult(
+                full_text=" ".join(full_text),
+                segments=all_segments,
+                language=detected_language or "unknown",
+                duration=total_duration
+            )
 
             console.print(
-                f"[bold green]文字起こし完了（言語: {result['language']}）[/bold green]"
+                f"[bold green]文字起こし完了（言語: {result.language}）[/bold green]"
             )
             return result
 
         except Exception as e:
             console.print(f"[bold red]文字起こしエラー: {str(e)}[/bold red]")
             raise
+
+    def transcribe(self, video_path: Path) -> TranscriptionResult:
+        """動画から音声を抽出して文字起こし"""
+        # 音声を抽出
+        audio_path = self.extract_audio(video_path)
+        
+        # 文字起こしを実行
+        result = self.transcribe_audio(audio_path)
+        
+        # 一時音声ファイルを削除
+        if audio_path.exists():
+            audio_path.unlink()
+        
+        return result
+
+    def transcribe_segments(self, video_path: Path) -> List[SubtitleSegment]:
+        """動画から音声を抽出して文字起こしし、セグメントのリストを返す"""
+        result = self.transcribe(video_path)
+        return result.segments

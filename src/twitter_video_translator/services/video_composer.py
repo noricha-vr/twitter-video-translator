@@ -96,7 +96,7 @@ class VideoComposer:
         console.print("[bold blue]動画を合成中...[/bold blue]")
 
         if output_path is None:
-            output_path = config.work_dir / "translated_video.mp4"
+            output_path = config.output_dir / "translated_video.mp4"
 
         try:
             # 入力ストリーム
@@ -111,13 +111,14 @@ class VideoComposer:
                 original_audio = input_video.audio.filter("volume", original_volume)  # 元の音声をoriginal_volumeに
                 japanese_audio = ffmpeg.input(str(audio_file)).audio.filter("volume", japanese_volume)  # 日本語音声をjapanese_volume倍に
                 
-                # 音声をミックス
+                # 音声をミックス（normalize=0で正規化を無効化）
                 audio_stream = ffmpeg.filter(
                     [original_audio, japanese_audio], 
                     "amix", 
                     inputs=2, 
                     duration="longest",
-                    dropout_transition=2
+                    dropout_transition=2,
+                    normalize=0
                 )
             else:
                 # 日本語音声がない場合：オリジナルの音声をそのまま使用
