@@ -51,7 +51,7 @@ class VideoComposer:
         
         # すべての音声をミックス
         input_labels = "".join(f"[a{i}]" for i in range(len(audio_segments)))
-        filter_parts.append(f"{input_labels}amix=inputs={len(audio_segments)}:duration=longest[out]")
+        filter_parts.append(f"{input_labels}amix=inputs={len(audio_segments)}:duration=longest:normalize=0[out]")
         
         filter_complex = ";".join(filter_parts)
         

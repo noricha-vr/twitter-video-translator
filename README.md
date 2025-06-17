@@ -1,55 +1,56 @@
-# Twitter Video Translator
+# Twitter Video Translator 🎬
 
-Twitter/X およびYouTubeの動画を自動的に日本語に翻訳し、字幕と音声を追加するツール
+Twitter/X およびYouTubeの動画を自動的に日本語に翻訳し、字幕と音声を追加する強力なツール
 
 [![Python](https://img.shields.io/badge/Python-3.13%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ## 🎥 概要
 
-このツールは、Twitter/X およびYouTubeの動画を自動的にダウンロードし、音声を文字起こしして日本語に翻訳、字幕と日本語音声を追加した動画を生成します。
+このツールは、Twitter/X およびYouTubeの動画を自動的にダウンロードし、音声を文字起こしして日本語に翻訳、字幕と日本語音声を追加した動画を生成します。原音声と日本語音声のミキシング機能により、学習用途から完全吹き替えまで幅広い用途に対応します。
 
-### 主な機能
+### ✨ 主な機能
 
 - 🔽 **動画ダウンロード**: Twitter/X およびYouTubeのURLから動画を自動ダウンロード
 - 🎤 **音声文字起こし**: Groq Whisper APIを使用した高精度な文字起こし
 - 🌐 **自動翻訳**: Google Gemini APIによる自然な日本語翻訳
-- 🗣️ **音声生成**: gTTSによる日本語音声の生成
+- 🗣️ **音声生成**: Google Gemini Flash 2.5 TTSによる高品質な日本語音声生成
 - 📝 **字幕生成**: タイムスタンプ付きのSRT字幕ファイル生成
 - 🎬 **動画合成**: FFmpegを使用した字幕・音声の合成
 - 🎛️ **音声ミキシング**: 原音声と日本語音声の音量を個別調整可能
 
 ## 📋 必要な環境
 
+### システム要件
 - Python 3.13以上
 - [FFmpeg](https://ffmpeg.org/)（システムにインストール済み）
-- [uv](https://github.com/astral-sh/uv)（Pythonパッケージマネージャー）
-- Groq API キー（[取得はこちら](https://console.groq.com/)）
-- Google Gemini API キー（[取得はこちら](https://makersuite.google.com/app/apikey)）
+- macOS、Linux、またはWindows
 
-## 🚀 インストール
+### 必要なAPIキー
+- **Groq API キー**: [Groq Console](https://console.groq.com/)から取得
+- **Google Gemini API キー**: [Google AI Studio](https://makersuite.google.com/app/apikey)から取得
 
-### 1. リポジトリのクローン
+## 🚀 クイックスタート
+
+### 1. インストール
 
 ```bash
+# リポジトリをクローン
 git clone https://github.com/noricha-vr/twitter-video-translator.git
 cd twitter-video-translator
-```
 
-### 2. 依存関係のインストール
-
-```bash
-# uvがインストールされていない場合
+# uvをインストール（未インストールの場合）
 pip install uv
 
 # 依存関係をインストール
 uv sync
 
-# パッケージをインストール（オプション）
+# パッケージをインストール（推奨）
 uv pip install .
 ```
 
-### 3. 環境変数の設定
+### 2. 環境設定
 
 `.env` ファイルを作成し、APIキーを設定：
 
@@ -58,197 +59,244 @@ GROQ_API_KEY=your_groq_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-## 💻 使い方
-
-### 基本的な使用方法
-
-#### 開発環境での実行
+### 3. 使用開始
 
 ```bash
 # Twitter/Xの動画を翻訳
-uv run python main.py https://x.com/user/status/123456789
-
-# YouTubeの動画を翻訳
-uv run python main.py https://www.youtube.com/watch?v=VIDEO_ID
-```
-
-#### インストール後の実行（推奨）
-
-```bash
-# パッケージをインストール後
 video-translator https://x.com/user/status/123456789
 
-# uvを経由する場合
-uv run video-translator https://x.com/user/status/123456789
+# YouTubeの動画を翻訳
+video-translator https://www.youtube.com/watch?v=VIDEO_ID
 ```
 
-### オプション
+## 💻 使い方
+
+### 基本コマンド
 
 ```bash
-# 字幕のみ（音声生成をスキップ）
-video-translator https://x.com/user/status/123456789 --no-tts
+# インストール後の実行（推奨）
+video-translator <URL> [オプション]
 
-# 出力ファイルを指定
-video-translator https://x.com/user/status/123456789 -o my_video.mp4
-
-# 音量調整オプション（デフォルト: 原音声15%、日本語音声+80%）
-video-translator https://x.com/user/status/123456789 --original-volume 0.2 --japanese-volume 2.0
-
-# ヘルプの表示
-video-translator --help
+# 開発環境での実行
+uv run python main.py <URL> [オプション]
 ```
 
-### 使用例
+### コマンドラインオプション
+
+| オプション | 説明 | デフォルト |
+|---------|------|----------|
+| `-o, --output` | 出力ファイルパス | 自動生成 |
+| `--no-tts` | 音声生成をスキップ（字幕のみ） | False |
+| `--original-volume` | 原音声の音量（0.0-1.0） | 0.15 |
+| `--japanese-volume` | 日本語音声の音量倍率 | 1.8 |
+| `--help` | ヘルプを表示 | - |
+
+### 📚 使用例
+
+#### 基本的な使用
 
 ```bash
-# Twitter動画URLの例
-video-translator "https://x.com/yuriyurii_329/status/1927560473450561910"
+# Twitter動画を翻訳
+video-translator "https://x.com/elonmusk/status/1234567890"
 
-# YouTube動画URLの例
+# YouTube動画を翻訳
 video-translator "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-# YouTubeショート動画URLの例  
-video-translator "https://youtube.com/shorts/VIDEO_ID"
-
-# 原音声を少し大きくし、日本語音声を控えめにする例
-video-translator "https://x.com/user/status/123456789" --original-volume 0.3 --japanese-volume 1.5
-
-# 原音声を消し、日本語音声のみにする例
-video-translator "https://x.com/user/status/123456789" --original-volume 0 --japanese-volume 2.0
+# YouTubeショートを翻訳
+video-translator "https://youtube.com/shorts/ABC123"
 ```
 
-### 音声ミキシングと音量調整
+#### 音声ミキシングの調整
 
-このツールは、原音声と日本語音声を同時に再生する音声ミキシング機能を提供します。両方の音声の音量を個別に調整できるため、最適なバランスを設定できます。
+```bash
+# 原音声を背景に残す（デフォルト）
+video-translator <URL> --original-volume 0.15 --japanese-volume 1.8
 
-#### 音量調整パラメータ
+# 日本語音声のみ（完全吹き替え）
+video-translator <URL> --original-volume 0 --japanese-volume 2.0
 
-- `--original-volume`: 原音声の音量倍率（デフォルト: 0.15 = 15%）
-  - 0.0: 原音声を完全にミュート
-  - 1.0: 原音声を元の音量で再生
-  - 0.1〜0.3: 背景音として原音声を残す（推奨）
+# 原音声重視（学習モード）
+video-translator <URL> --original-volume 0.8 --japanese-volume 1.0
 
-- `--japanese-volume`: 日本語音声の音量倍率（デフォルト: 1.8 = +80%）
-  - 1.0: 生成された音声をそのまま再生
-  - 1.5〜2.0: 日本語音声を強調（推奨）
-  - 2.0以上: より大きく日本語音声を再生
+# カスタム出力ファイル名
+video-translator <URL> -o translated_video.mp4
+```
 
-#### 使用シナリオ例
+### 🎛️ 音声ミキシング機能
 
-1. **標準的な使用（デフォルト設定）**
-   ```bash
-   video-translator "動画URL"
-   # 原音声15%、日本語音声+80%で自動ミキシング
-   ```
+#### 音量パラメータ詳細
 
-2. **原音声を背景に残しつつ日本語を強調**
-   ```bash
-   video-translator "動画URL" --original-volume 0.2 --japanese-volume 2.0
-   ```
+**`--original-volume`** (0.0 - 1.0)
+- `0.0`: 原音声を完全にミュート
+- `0.15`: デフォルト設定（背景音として残す）
+- `1.0`: 原音声を元の音量で再生
 
-3. **日本語音声のみ（吹き替えモード）**
-   ```bash
-   video-translator "動画URL" --original-volume 0 --japanese-volume 1.5
-   ```
+**`--japanese-volume`** (0.5 - 3.0)
+- `1.0`: 生成音声をそのまま再生
+- `1.8`: デフォルト設定（+80%増幅）
+- `2.0+`: より大きく日本語音声を再生
 
-4. **原音声を重視（字幕付き学習モード）**
-   ```bash
-   video-translator "動画URL" --original-volume 0.8 --japanese-volume 1.0
-   ```
+#### 推奨設定
 
-## 📁 ディレクトリ構造
+| 用途 | original-volume | japanese-volume |
+|-----|----------------|-----------------|
+| 標準視聴 | 0.15 | 1.8 |
+| 完全吹き替え | 0.0 | 2.0 |
+| 言語学習 | 0.6 | 1.2 |
+| 背景音重視 | 0.8 | 1.0 |
+
+## 🛠️ トラブルシューティング
+
+### よくある問題と解決方法
+
+#### FFmpegが見つからない
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu/Debian
+sudo apt update && sudo apt install ffmpeg
+
+# Windows
+# FFmpeg公式サイトからダウンロードしてPATHに追加
+```
+
+#### APIキーエラー
+
+```bash
+# .envファイルが正しく設定されているか確認
+cat .env
+
+# 環境変数を再読み込み
+source .env
+```
+
+#### メモリ不足エラー
+
+長い動画の処理時にメモリ不足が発生する場合：
+- 動画を短いセグメントに分割して処理
+- システムのスワップ領域を増やす
+
+#### 音声同期の問題
+
+音声と字幕がずれる場合：
+- `--no-tts`オプションで字幕のみ生成して確認
+- FFmpegのバージョンを最新に更新
+
+## 📁 プロジェクト構造
 
 ```
 twitter-video-translator/
 ├── src/
 │   └── twitter_video_translator/
-│       ├── services/          # 各種サービス
-│       │   ├── downloader.py  # 動画ダウンロード
-│       │   ├── transcriber.py # 音声文字起こし
-│       │   ├── translator.py  # テキスト翻訳
-│       │   ├── tts.py        # 音声生成
+│       ├── __init__.py
+│       ├── cli.py                # CLIエントリーポイント
+│       ├── config.py             # 設定管理
+│       ├── services/             # コアサービス
+│       │   ├── __init__.py
+│       │   ├── downloader.py    # 動画ダウンロード
+│       │   ├── transcriber.py   # 音声文字起こし
+│       │   ├── translator.py    # テキスト翻訳
+│       │   ├── tts.py          # 音声生成
 │       │   └── video_composer.py # 動画合成
-│       ├── utils/            # ユーティリティ
-│       │   └── subtitle.py   # 字幕生成
-│       ├── config.py         # 設定管理
-│       └── cli.py           # CLIインターフェース
-├── tests/                   # テストコード
-├── scripts/                 # 開発用スクリプト
-├── temp/                    # 一時ファイル（自動生成）
-├── output/                  # 出力ファイル（自動生成）
-└── main.py                  # エントリーポイント
+│       └── utils/               # ユーティリティ
+│           ├── __init__.py
+│           ├── logger.py        # ロギング
+│           └── subtitle.py      # 字幕生成
+├── tests/                       # テストコード
+├── scripts/                     # 開発用スクリプト
+├── docs/                        # ドキュメント
+├── .env.example                 # 環境変数サンプル
+├── pyproject.toml              # プロジェクト設定
+├── README.md                   # このファイル
+└── LICENSE                     # ライセンス
 ```
 
-## 🔧 開発
+## 🔧 開発者向け情報
+
+### 開発環境のセットアップ
+
+```bash
+# 開発用依存関係をインストール
+uv sync --dev
+
+# pre-commitフックをセットアップ（オプション）
+pre-commit install
+```
 
 ### テストの実行
 
 ```bash
-# すべてのテストを実行
-uv run pytest tests/ -v
+# 全テストを実行
+uv run pytest
 
-# カバレッジ付きでテスト
-uv run pytest tests/ --cov=src
+# カバレッジ付きテスト
+uv run pytest --cov=src --cov-report=html
+
+# 特定のテストを実行
+uv run pytest tests/test_downloader.py -v
 ```
 
-### コード品質チェック
+### コード品質
 
 ```bash
-# コードフォーマット
+# フォーマット
 uv run black src/ tests/
 
 # Lintチェック
 uv run ruff check src/
 
-# 自動修正
-uv run ruff check src/ --fix
+# 型チェック
+uv run mypy src/
 ```
 
-### ローカルテスト
+### リリース手順
 
-```bash
-# テスト用動画の生成
-uv run python scripts/create_test_video.py
-
-# ローカル動画でテスト
-uv run python scripts/test_local_video.py
-```
-
-## ⚙️ 技術仕様
-
-### API制限への対応
-
-- **Groq API**: 25MB以上の音声ファイルは5分ごとに自動分割
-- **Gemini API**: レート制限を考慮して1秒の遅延を追加
-
-### 対応フォーマット
-
-- **入力**: Twitter/X およびYouTubeの動画（mp4, webm, mkv等）
-- **出力**: MP4形式（H.264ビデオ、AAC音声）
-- **字幕**: SRT形式
+1. バージョンを更新: `pyproject.toml`
+2. CHANGELOGを更新
+3. タグを作成: `git tag v0.2.0`
+4. プッシュ: `git push origin v0.2.0`
 
 ## 🤝 コントリビューション
 
-プルリクエストを歓迎します！大きな変更を行う場合は、まずissueを作成して変更内容について議論してください。
+プルリクエストを歓迎します！貢献方法：
 
-1. プロジェクトをフォーク
+1. このリポジトリをフォーク
 2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
+3. 変更をコミット (`git commit -m 'Add amazing feature'`)
 4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
 5. プルリクエストを作成
 
+### コーディング規約
+
+- [Black](https://github.com/psf/black)でフォーマット
+- [Ruff](https://github.com/charliermarsh/ruff)でLintチェック
+- 型ヒントを使用
+- テストを書く
+- ドキュメントを更新
+
 ## 📄 ライセンス
 
-このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。
+このプロジェクトは[MITライセンス](LICENSE)の下で公開されています。
 
 ## 🙏 謝辞
 
+このプロジェクトは以下の素晴らしいツールとサービスを使用しています：
+
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) - 動画ダウンロード
-- [Groq](https://groq.com/) - 高速な音声文字起こし
-- [Google Gemini](https://deepmind.google/technologies/gemini/) - 自然な翻訳
-- [gTTS](https://github.com/pndurette/gTTS) - 音声生成
+- [Groq](https://groq.com/) - 高速音声文字起こし
+- [Google Gemini](https://deepmind.google/technologies/gemini/) - 翻訳と音声生成
 - [FFmpeg](https://ffmpeg.org/) - 動画処理
+- [Rich](https://github.com/Textualize/rich) - 美しいCLI出力
+- [Click](https://click.palletsprojects.com/) - CLIフレームワーク
 
-## 📧 お問い合わせ
+## 📞 サポート
 
-質問や提案がある場合は、[Issues](https://github.com/noricha-vr/twitter-video-translator/issues)でお知らせください。
+- **バグ報告**: [GitHub Issues](https://github.com/noricha-vr/twitter-video-translator/issues)
+- **機能リクエスト**: [GitHub Discussions](https://github.com/noricha-vr/twitter-video-translator/discussions)
+- **質問**: [GitHub Discussions](https://github.com/noricha-vr/twitter-video-translator/discussions)
+
+---
+
+Made with ❤️ by [noricha-vr](https://github.com/noricha-vr)
