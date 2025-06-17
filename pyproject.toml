@@ -17,6 +17,9 @@ dependencies = [
     "ffmpeg-python>=0.2.0",
 ]
 
+[project.scripts]
+video-translator = "twitter_video_translator.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.0",

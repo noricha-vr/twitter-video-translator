@@ -44,6 +44,9 @@ pip install uv
 
 # 依存関係をインストール
 uv sync
+
+# パッケージをインストール（オプション）
+uv pip install .
 ```
 
 ### 3. 環境変数の設定
@@ -59,6 +62,8 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 ### 基本的な使用方法
 
+#### 開発環境での実行
+
 ```bash
 # Twitter/Xの動画を翻訳
 uv run python main.py https://x.com/user/status/123456789
@@ -67,39 +72,49 @@ uv run python main.py https://x.com/user/status/123456789
 uv run python main.py https://www.youtube.com/watch?v=VIDEO_ID
 ```
 
+#### インストール後の実行（推奨）
+
+```bash
+# パッケージをインストール後
+video-translator https://x.com/user/status/123456789
+
+# uvを経由する場合
+uv run video-translator https://x.com/user/status/123456789
+```
+
 ### オプション
 
 ```bash
 # 字幕のみ（音声生成をスキップ）
-uv run python main.py https://x.com/user/status/123456789 --no-tts
+video-translator https://x.com/user/status/123456789 --no-tts
 
 # 出力ファイルを指定
-uv run python main.py https://x.com/user/status/123456789 -o my_video.mp4
+video-translator https://x.com/user/status/123456789 -o my_video.mp4
 
 # 音量調整オプション（デフォルト: 原音声15%、日本語音声+80%）
-uv run python main.py https://x.com/user/status/123456789 --original-volume 0.2 --japanese-volume 2.0
+video-translator https://x.com/user/status/123456789 --original-volume 0.2 --japanese-volume 2.0
 
 # ヘルプの表示
-uv run python main.py --help
+video-translator --help
 ```
 
 ### 使用例
 
 ```bash
 # Twitter動画URLの例
-uv run python main.py "https://x.com/yuriyurii_329/status/1927560473450561910"
+video-translator "https://x.com/yuriyurii_329/status/1927560473450561910"
 
 # YouTube動画URLの例
-uv run python main.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+video-translator "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
 # YouTubeショート動画URLの例  
-uv run python main.py "https://youtube.com/shorts/VIDEO_ID"
+video-translator "https://youtube.com/shorts/VIDEO_ID"
 
 # 原音声を少し大きくし、日本語音声を控えめにする例
-uv run python main.py "https://x.com/user/status/123456789" --original-volume 0.3 --japanese-volume 1.5
+video-translator "https://x.com/user/status/123456789" --original-volume 0.3 --japanese-volume 1.5
 
 # 原音声を消し、日本語音声のみにする例
-uv run python main.py "https://x.com/user/status/123456789" --original-volume 0 --japanese-volume 2.0
+video-translator "https://x.com/user/status/123456789" --original-volume 0 --japanese-volume 2.0
 ```
 
 ### 音声ミキシングと音量調整
@@ -122,23 +137,23 @@ uv run python main.py "https://x.com/user/status/123456789" --original-volume 0 
 
 1. **標準的な使用（デフォルト設定）**
    ```bash
-   uv run python main.py "動画URL"
+   video-translator "動画URL"
    # 原音声15%、日本語音声+80%で自動ミキシング
    ```
 
 2. **原音声を背景に残しつつ日本語を強調**
    ```bash
-   uv run python main.py "動画URL" --original-volume 0.2 --japanese-volume 2.0
+   video-translator "動画URL" --original-volume 0.2 --japanese-volume 2.0
    ```
 
 3. **日本語音声のみ（吹き替えモード）**
    ```bash
-   uv run python main.py "動画URL" --original-volume 0 --japanese-volume 1.5
+   video-translator "動画URL" --original-volume 0 --japanese-volume 1.5
    ```
 
 4. **原音声を重視（字幕付き学習モード）**
    ```bash
-   uv run python main.py "動画URL" --original-volume 0.8 --japanese-volume 1.0
+   video-translator "動画URL" --original-volume 0.8 --japanese-volume 1.0
    ```
 
 ## 📁 ディレクトリ構造
