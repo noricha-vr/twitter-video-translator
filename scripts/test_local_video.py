@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.twitter_video_translator.cli import TwitterVideoTranslatorCLI
+from src.twitter_video_translator.cli import VideoTranslatorCLI
 from src.twitter_video_translator.services.transcriber import AudioTranscriber
 from src.twitter_video_translator.services.translator import TextTranslator
 from src.twitter_video_translator.services.tts import TextToSpeech
@@ -71,7 +71,7 @@ def test_local_video(video_path: Path):
             composer.merge_audio_segments(segments_with_audio, audio_file)
         
         # 6. 動画合成
-        output_path = config.work_dir / "test_translated_video.mp4"
+        output_path = config.work_dir / f"{video_path.stem}_ja.mp4"
         final_video = composer.compose_video(
             video_path,
             subtitle_path,
