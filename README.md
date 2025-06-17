@@ -87,8 +87,10 @@ uv run python main.py <URL> [オプション]
 |---------|------|----------|
 | `-o, --output` | 出力ファイルパス | 自動生成 |
 | `--no-tts` | 音声生成をスキップ（字幕のみ） | False |
+| `-l, --target-language` | 翻訳先の言語 | Japanese |
+| `-v, --voice` | TTS音声の選択 | Aoede |
 | `--original-volume` | 原音声の音量（0.0-1.0） | 0.15 |
-| `--japanese-volume` | 日本語音声の音量倍率 | 1.8 |
+| `--japanese-volume` | 翻訳音声の音量倍率 | 1.8 |
 | `--help` | ヘルプを表示 | - |
 
 ### 📚 使用例
@@ -106,13 +108,29 @@ video-translator "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 video-translator "https://youtube.com/shorts/ABC123"
 ```
 
+#### 言語と音声の選択
+
+```bash
+# 中国語に翻訳（Kore音声を使用）
+video-translator <URL> -l Chinese -v Kore
+
+# 英語に翻訳（Schedar音声を使用）
+video-translator <URL> -l English -v Schedar
+
+# スペイン語に翻訳（Sulafat音声を使用）
+video-translator <URL> -l Spanish -v Sulafat
+
+# フランス語に翻訶（Vindemiatrix音声を使用）
+video-translator <URL> -l French -v Vindemiatrix
+```
+
 #### 音声ミキシングの調整
 
 ```bash
 # 原音声を背景に残す（デフォルト）
 video-translator <URL> --original-volume 0.15 --japanese-volume 1.8
 
-# 日本語音声のみ（完全吹き替え）
+# 完全吹き替え（原音声をミュート）
 video-translator <URL> --original-volume 0 --japanese-volume 2.0
 
 # 原音声重視（学習モード）
@@ -134,7 +152,7 @@ video-translator <URL> -o translated_video.mp4
 **`--japanese-volume`** (0.5 - 3.0)
 - `1.0`: 生成音声をそのまま再生
 - `1.8`: デフォルト設定（+80%増幅）
-- `2.0+`: より大きく日本語音声を再生
+- `2.0+`: より大きく翻訳音声を再生
 
 #### 推奨設定
 
@@ -144,6 +162,34 @@ video-translator <URL> -o translated_video.mp4
 | 完全吹き替え | 0.0 | 2.0 |
 | 言語学習 | 0.6 | 1.2 |
 | 背景音重視 | 0.8 | 1.0 |
+
+### 🌍 多言語対応
+
+本ツールは30以上の言語への翻訳に対応しています：
+
+**主要言語**: Japanese, English, Chinese, Spanish, French, German, Italian, Portuguese, Russian, Korean
+
+**その他の対応言語**: Arabic, Hindi, Turkish, Polish, Dutch, Swedish, Danish, Norwegian, Finnish, Czech, Greek, Hebrew, Indonesian, Malay, Thai, Vietnamese, Filipino, Bengali, Tamil, Telugu, Urdu
+
+### 🎤 音声オプション
+
+30種類の音声から選択可能です。各音声には特徴があります：
+
+**日本語推奨音声**:
+- `Aoede` (Breezy) - 軽快で親しみやすい声
+- `Kore` (Firm) - しっかりとした声
+- `Schedar` (Even) - 落ち着いた均一な声
+- `Vindemiatrix` (Gentle) - 優しい声
+- `Sulafat` (Warm) - 温かみのある声
+
+**その他の特徴的な音声**:
+- `Zephyr` (Bright) - 明るい声
+- `Puck` (Upbeat) - 元気な声
+- `Fenrir` (Excitable) - 興奮した声
+- `Leda` (Youthful) - 若々しい声
+- `Algieba` (Smooth) - なめらかな声
+
+`--help`オプションで全音声の一覧を確認できます。
 
 ## 🛠️ トラブルシューティング
 

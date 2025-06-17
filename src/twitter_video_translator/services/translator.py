@@ -19,10 +19,12 @@ class TextTranslator:
         self.model = genai.GenerativeModel(config.gemini_model)
 
     def translate_segments(
-        self, segments: List[SubtitleSegment], source_lang: str
+        self, segments: List[SubtitleSegment], source_lang: str, target_language: str = None
     ) -> List[SubtitleSegment]:
         """セグメントごとに翻訳"""
-        console.print("[bold blue]テキストを翻訳中...[/bold blue]")
+        if target_language is None:
+            target_language = config.target_language
+        console.print(f"[bold blue]テキストを{target_language}に翻訳中...[/bold blue]")
 
         translated_segments = []
 
@@ -37,7 +39,7 @@ class TextTranslator:
                 texts_to_translate.append(f"[{idx}] {segment.text}")
 
             # プロンプト作成
-            prompt = f"""以下の{source_lang}のテキストを自然な{config.target_language}に翻訳してください。
+            prompt = f"""以下の{source_lang}のテキストを自然な{target_language}に翻訳してください。
 各行の番号（[0], [1]など）は保持してください。
 映像の字幕として使用するため、短く簡潔に翻訳してください。
 
