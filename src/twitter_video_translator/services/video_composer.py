@@ -80,8 +80,19 @@ class VideoComposer:
         subtitle_file: Path,
         audio_file: Optional[Path] = None,
         output_path: Optional[Path] = None,
+        original_volume: float = 0.15,
+        japanese_volume: float = 1.8,
     ) -> Path:
-        """動画、音声、字幕を合成"""
+        """動画、音声、字幕を合成
+        
+        Args:
+            original_video: 元の動画ファイルパス
+            subtitle_file: 字幕ファイルパス
+            audio_file: 日本語音声ファイルパス（オプション）
+            output_path: 出力ファイルパス（オプション）
+            original_volume: 元の音声のボリューム（デフォルト: 0.15 = 15%）
+            japanese_volume: 日本語音声のボリューム倍率（デフォルト: 1.8 = +80%）
+        """
         console.print("[bold blue]動画を合成中...[/bold blue]")
 
         if output_path is None:
@@ -95,10 +106,10 @@ class VideoComposer:
             video_stream = input_video.video
             
             if audio_file and audio_file.exists():
-                # 日本語音声がある場合：元の音声を30%に下げて、日本語音声とミックス
-                logger.info("日本語音声とオリジナル音声をミックス（オリジナル音声：30%）")
-                original_audio = input_video.audio.filter("volume", 0.3)  # 元の音声を30%に
-                japanese_audio = ffmpeg.input(str(audio_file)).audio
+                # 日本語音声がある場合：元の音声を指定のボリュームに下げて、日本語音声とミックス
+                logger.info(f"日本語音声とオリジナル音声をミックス（オリジナル音声：{original_volume*100:.0f}%、日本語音声：{japanese_volume*100:.0f}%）")
+                original_audio = input_video.audio.filter("volume", original_volume)  # 元の音声をoriginal_volumeに
+                japanese_audio = ffmpeg.input(str(audio_file)).audio.filter("volume", japanese_volume)  # 日本語音声をjapanese_volume倍に
                 
                 # 音声をミックス
                 audio_stream = ffmpeg.filter(
