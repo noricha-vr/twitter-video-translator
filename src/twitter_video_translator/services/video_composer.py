@@ -6,6 +6,7 @@ import ffmpeg
 import subprocess
 from rich.console import Console
 from ..config import config
+from ..utils.logger import logger
 
 console = Console()
 
@@ -90,14 +91,26 @@ class VideoComposer:
             # 入力ストリーム
             input_video = ffmpeg.input(str(original_video))
 
-            # 音声ストリーム（新しい音声がある場合は置き換え）
+            # 音声ストリーム処理
+            video_stream = input_video.video
+            
             if audio_file and audio_file.exists():
-                input_audio = ffmpeg.input(str(audio_file))
-                video_stream = input_video.video
-                audio_stream = input_audio.audio
+                # 日本語音声がある場合：元の音声を30%に下げて、日本語音声とミックス
+                logger.info("日本語音声とオリジナル音声をミックス（オリジナル音声：30%）")
+                original_audio = input_video.audio.filter("volume", 0.3)  # 元の音声を30%に
+                japanese_audio = ffmpeg.input(str(audio_file)).audio
+                
+                # 音声をミックス
+                audio_stream = ffmpeg.filter(
+                    [original_audio, japanese_audio], 
+                    "amix", 
+                    inputs=2, 
+                    duration="longest",
+                    dropout_transition=2
+                )
             else:
-                # オリジナルの音声を使用
-                video_stream = input_video.video
+                # 日本語音声がない場合：オリジナルの音声をそのまま使用
+                logger.info("日本語音声なし、オリジナル音声を使用")
                 audio_stream = input_video.audio
 
             # 字幕フィルターを適用
