@@ -17,6 +17,7 @@ Twitter/X およびYouTubeの動画を自動的に日本語に翻訳し、字幕
 - 🗣️ **音声生成**: gTTSによる日本語音声の生成
 - 📝 **字幕生成**: タイムスタンプ付きのSRT字幕ファイル生成
 - 🎬 **動画合成**: FFmpegを使用した字幕・音声の合成
+- 🎛️ **音声ミキシング**: 原音声と日本語音声の音量を個別調整可能
 
 ## 📋 必要な環境
 
@@ -75,6 +76,9 @@ uv run python main.py https://x.com/user/status/123456789 --no-tts
 # 出力ファイルを指定
 uv run python main.py https://x.com/user/status/123456789 -o my_video.mp4
 
+# 音量調整オプション（デフォルト: 原音声15%、日本語音声+80%）
+uv run python main.py https://x.com/user/status/123456789 --original-volume 0.2 --japanese-volume 2.0
+
 # ヘルプの表示
 uv run python main.py --help
 ```
@@ -90,7 +94,52 @@ uv run python main.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
 # YouTubeショート動画URLの例  
 uv run python main.py "https://youtube.com/shorts/VIDEO_ID"
+
+# 原音声を少し大きくし、日本語音声を控えめにする例
+uv run python main.py "https://x.com/user/status/123456789" --original-volume 0.3 --japanese-volume 1.5
+
+# 原音声を消し、日本語音声のみにする例
+uv run python main.py "https://x.com/user/status/123456789" --original-volume 0 --japanese-volume 2.0
 ```
+
+### 音声ミキシングと音量調整
+
+このツールは、原音声と日本語音声を同時に再生する音声ミキシング機能を提供します。両方の音声の音量を個別に調整できるため、最適なバランスを設定できます。
+
+#### 音量調整パラメータ
+
+- `--original-volume`: 原音声の音量倍率（デフォルト: 0.15 = 15%）
+  - 0.0: 原音声を完全にミュート
+  - 1.0: 原音声を元の音量で再生
+  - 0.1〜0.3: 背景音として原音声を残す（推奨）
+
+- `--japanese-volume`: 日本語音声の音量倍率（デフォルト: 1.8 = +80%）
+  - 1.0: 生成された音声をそのまま再生
+  - 1.5〜2.0: 日本語音声を強調（推奨）
+  - 2.0以上: より大きく日本語音声を再生
+
+#### 使用シナリオ例
+
+1. **標準的な使用（デフォルト設定）**
+   ```bash
+   uv run python main.py "動画URL"
+   # 原音声15%、日本語音声+80%で自動ミキシング
+   ```
+
+2. **原音声を背景に残しつつ日本語を強調**
+   ```bash
+   uv run python main.py "動画URL" --original-volume 0.2 --japanese-volume 2.0
+   ```
+
+3. **日本語音声のみ（吹き替えモード）**
+   ```bash
+   uv run python main.py "動画URL" --original-volume 0 --japanese-volume 1.5
+   ```
+
+4. **原音声を重視（字幕付き学習モード）**
+   ```bash
+   uv run python main.py "動画URL" --original-volume 0.8 --japanese-volume 1.0
+   ```
 
 ## 📁 ディレクトリ構造
 
