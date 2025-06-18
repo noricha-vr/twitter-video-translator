@@ -96,7 +96,7 @@ JSONフォーマットで回答してください：
     "summary": "全体的な話し方の要約"
 }}"""
             
-            # Gemini APIで分析
+            # Gemini APIで分析（リトライ機能付き）
             contents = [
                 types.Content(
                     role="user",
@@ -110,31 +110,51 @@ JSONフォーマットで回答してください：
                 ),
             ]
             
-            response = await self.client.aio.models.generate_content(
-                model=self.model,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    temperature=0.3,
-                    response_mime_type="application/json"
-                ),
-            )
+            max_retries = 3
+            retry_count = 0
             
-            # レスポンスをパース
-            if response.text:
-                import json
-                analysis_result = json.loads(response.text)
+            while retry_count < max_retries:
+                try:
+                    response = await self.client.aio.models.generate_content(
+                        model=self.model,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            temperature=0.3,
+                            response_mime_type="application/json"
+                        ),
+                    )
+                    
+                    # レスポンスをパース
+                    if response.text:
+                        import json
+                        analysis_result = json.loads(response.text)
+                        
+                        # セグメント情報を追加
+                        if segment:
+                            analysis_result["segment_info"] = {
+                                "start_time": segment.start_time,
+                                "end_time": segment.end_time,
+                                "text": segment.text
+                            }
+                        
+                        return analysis_result
+                    else:
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            console.print(f"[yellow]分析結果が空です。リトライ {retry_count}/{max_retries}[/yellow]")
+                            import asyncio
+                            await asyncio.sleep(1)
+                        else:
+                            raise Exception("分析結果が空です")
                 
-                # セグメント情報を追加
-                if segment:
-                    analysis_result["segment_info"] = {
-                        "start_time": segment.start_time,
-                        "end_time": segment.end_time,
-                        "text": segment.text
-                    }
-                
-                return analysis_result
-            else:
-                raise Exception("分析結果が空です")
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        console.print(f"[yellow]Gemini API エラー: {str(e)}. リトライ {retry_count}/{max_retries}[/yellow]")
+                        import asyncio
+                        await asyncio.sleep(1)
+                    else:
+                        raise  # 最後のリトライでも失敗した場合は例外を再発生
                 
         except Exception as e:
             console.print(f"[yellow]音声スタイル分析エラー: {str(e)}[/yellow]")
