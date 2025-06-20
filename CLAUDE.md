@@ -11,6 +11,10 @@ This is a Twitter video translator application that:
 - Adds Japanese subtitles and audio using Gemini Flash 2.5 TTS
 - Outputs a new video with Japanese audio and subtitles
 
+## 開発理念
+
+- このプロジェクトはまだ開発段階で誰にも迷惑をかけません。互換性を一切考慮する必要はありません。最終的に最もシンプルで保守しやすいプログラムになることが重要です。
+
 ## Development Setup
 
 ### Package Management

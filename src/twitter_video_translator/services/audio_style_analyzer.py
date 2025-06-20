@@ -16,7 +16,7 @@ class AudioStyleAnalyzer:
     
     def __init__(self):
         self.client = genai.Client(api_key=config.gemini_api_key)
-        self.model = "gemini-2.5-flash-preview-05-20"
+        self.model = "gemini-2.0-flash-exp"
         
     async def analyze_audio_style(
         self, 
@@ -234,3 +234,154 @@ JSONフォーマットで回答してください：
                 tts_style["style"] = "confident"
         
         return tts_style
+    
+    async def generate_tts_prompt(
+        self, 
+        audio_path: Path,
+        transcribed_text: str,
+        target_language: str,
+        target_text: str,
+        segment: Optional[SubtitleSegment] = None
+    ) -> str:
+        """音声を分析し、ターゲット言語のTTSプロンプトを直接生成
+        
+        Args:
+            audio_path: 分析する音声ファイル
+            transcribed_text: 元の文字起こしテキスト
+            target_language: ターゲット言語コード（ja, en, zh, ko等）
+            target_text: 読み上げるターゲット言語のテキスト
+            segment: 字幕セグメント情報（オプション）
+            
+        Returns:
+            ターゲット言語で書かれたTTSプロンプト
+        """
+        try:
+            # 音声ファイルを読み込み
+            audio_data = audio_path.read_bytes()
+            mime_type = "audio/wav"
+            
+            # プロンプトを言語に応じて作成
+            analysis_prompt = self._create_analysis_prompt_for_tts(
+                target_language, transcribed_text, target_text
+            )
+            
+            # Gemini APIで分析とプロンプト生成を同時に実行
+            response = await self.client.aio.models.generate_content(
+                model=self.model,
+                contents=[
+                    types.Content(
+                        role="user",
+                        parts=[
+                            types.Part(
+                                inline_data=types.Blob(
+                                    mime_type=mime_type,
+                                    data=audio_data
+                                )
+                            ),
+                            types.Part.from_text(text=analysis_prompt)
+                        ]
+                    )
+                ]
+            )
+            
+            if response.text:
+                return response.text.strip()
+            else:
+                # フォールバック: デフォルトプロンプト
+                return self._get_default_tts_prompt(target_language, target_text)
+                
+        except Exception as e:
+            console.print(f"[yellow]TTSプロンプト生成エラー: {str(e)}[/yellow]")
+            # エラー時はデフォルトプロンプトを返す
+            return self._get_default_tts_prompt(target_language, target_text)
+    
+    def _create_analysis_prompt_for_tts(
+        self, target_language: str, transcribed_text: str, target_text: str
+    ) -> str:
+        """音声分析とTTSプロンプト生成用のプロンプトを作成"""
+        
+        prompts = {
+            "ja": f"""
+この音声を分析して、話者の特徴を再現するための日本語のTTSプロンプトを生成してください。
+
+元のテキスト: {transcribed_text}
+
+以下の要素を分析して、自然な日本語でTTSへの指示を作成してください：
+1. 話者の性別、年齢層、声質
+2. 話速、リズム、間の取り方
+3. 感情、トーン、雰囲気
+4. 特徴的な話し方（方言、癖など）
+5. 声の震えや強弱などの特殊効果
+
+生成するプロンプトは「あなたは〜」で始め、話者の特徴を詳細に説明し、
+最後に「次のテキストを読んでください：」で終わるようにしてください。
+
+読み上げるテキスト: {target_text}
+""",
+            "en": f"""
+Analyze this audio and generate an English TTS prompt to reproduce the speaker's characteristics.
+
+Original text: {transcribed_text}
+
+Analyze the following elements and create natural English instructions for TTS:
+1. Speaker's gender, age range, voice quality
+2. Speaking pace, rhythm, pauses
+3. Emotions, tone, atmosphere
+4. Distinctive speaking style (accent, habits)
+5. Special effects like voice tremor or emphasis
+
+Start the prompt with "You are..." and describe the speaker's characteristics in detail,
+ending with "Please read the following text:"
+
+Text to read: {target_text}
+""",
+            "zh": f"""
+分析这段音频并生成中文TTS提示词来再现说话者的特征。
+
+原文: {transcribed_text}
+
+分析以下要素并为TTS创建自然的中文指示：
+1. 说话者的性别、年龄段、音质
+2. 语速、节奏、停顿
+3. 情感、语调、氛围
+4. 独特的说话风格（口音、习惯）
+5. 声音颤抖或强调等特殊效果
+
+提示词以"你是..."开头，详细描述说话者的特征，
+以"请朗读以下文本："结尾。
+
+要朗读的文本: {target_text}
+""",
+            "ko": f"""
+이 음성을 분석하여 화자의 특징을 재현하는 한국어 TTS 프롬프트를 생성해주세요.
+
+원본 텍스트: {transcribed_text}
+
+다음 요소들을 분석하여 TTS를 위한 자연스러운 한국어 지시를 만들어주세요:
+1. 화자의 성별, 연령대, 음성 특징
+2. 말하는 속도, 리듬, 쉼
+3. 감정, 톤, 분위기
+4. 독특한 말하기 스타일 (사투리, 습관)
+5. 음성 떨림이나 강조 같은 특수 효과
+
+프롬프트는 "당신은..."으로 시작하여 화자의 특징을 자세히 설명하고,
+"다음 텍스트를 읽어주세요:"로 끝내주세요.
+
+읽을 텍스트: {target_text}
+"""
+        }
+        
+        # デフォルトは英語
+        return prompts.get(target_language, prompts["en"])
+    
+    def _get_default_tts_prompt(self, target_language: str, target_text: str) -> str:
+        """デフォルトのTTSプロンプトを返す"""
+        
+        defaults = {
+            "ja": f"自然な日本語で次のテキストを読んでください：\n\n{target_text}",
+            "en": f"Please read the following text in a natural voice:\n\n{target_text}",
+            "zh": f"请用自然的声音朗读以下文本：\n\n{target_text}",
+            "ko": f"자연스러운 목소리로 다음 텍스트를 읽어주세요:\n\n{target_text}"
+        }
+        
+        return defaults.get(target_language, defaults["en"])

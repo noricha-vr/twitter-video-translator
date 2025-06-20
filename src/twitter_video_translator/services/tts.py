@@ -84,7 +84,8 @@ class TextToSpeech:
         self, 
         text: str, 
         output_path: Path,
-        style_params: Optional[Dict[str, Any]] = None
+        style_params: Optional[Dict[str, Any]] = None,
+        target_language: str = "ja"
     ) -> Optional[Path]:
         """単一セグメントの音声生成
         
@@ -92,6 +93,7 @@ class TextToSpeech:
             text: 生成するテキスト
             output_path: 出力パス
             style_params: 音声スタイルパラメータ（オプション）
+            target_language: ターゲット言語コード
         """
         try:
             # スタイル情報からプロンプトを構築
@@ -101,55 +103,37 @@ class TextToSpeech:
                 intensity = style_params.get("style_intensity", "moderate")
                 speed = style_params.get("speed", 1.0)
                 
-                # Style descriptions in English
-                style_descriptions = {
-                    "cheerful": "cheerful and happy",
-                    "sad": "sad",
-                    "angry": "angry",
-                    "worried": "worried",
-                    "excited": "excited",
-                    "dissatisfied": "dissatisfied",
-                    "confident": "confident",
-                    "neutral": "neutral"
-                }
+                # Style descriptions in target language
+                style_descriptions = self._get_style_descriptions(target_language)
                 
                 style_desc = style_descriptions.get(style, "neutral")
                 
-                # Intensity modifiers
-                intensity_modifiers = {
-                    "weak": "slightly",
-                    "moderate": "",
-                    "strong": "very"
-                }
+                # Intensity modifiers in target language
+                intensity_modifiers = self._get_intensity_modifiers(target_language)
                 intensity_modifier = intensity_modifiers.get(intensity, "")
                 
-                # Speed modifiers
+                # Speed modifiers in target language
+                speed_modifiers = self._get_speed_modifiers(target_language)
                 speed_modifier = ""
                 if speed is not None and speed < 0.8:
-                    speed_modifier = "slowly"
+                    speed_modifier = speed_modifiers["slow"]
                 elif speed is not None and speed > 1.2:
-                    speed_modifier = "quickly"
+                    speed_modifier = speed_modifiers["fast"]
                 
-                # Build style prompt in English
-                style_components = []
-                if speed_modifier:
-                    style_components.append(f"Read {speed_modifier}")
-                else:
-                    style_components.append("Read")
-                
-                style_components.append("the following text in a")
-                
-                if intensity_modifier:
-                    style_components.append(f"{intensity_modifier} {style_desc}")
-                else:
-                    style_components.append(style_desc)
-                
-                style_components.append("tone:")
-                
-                style_prompt = f"{' '.join(style_components)}\n\n"
+                # Build style prompt in target language
+                style_prompt = self._build_style_prompt(
+                    target_language, speed_modifier, intensity_modifier, style_desc
+                )
             
             # プロンプトとテキストを結合
             full_text = style_prompt + text if style_prompt else text
+            
+            # デバッグ用: プロンプトをログに出力
+            if style_prompt:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.debug(f"TTS prompt: {style_prompt.strip()}")
+                logger.debug(f"TTS text: {text[:50]}...")
             
             contents = [
                 types.Content(
@@ -231,7 +215,8 @@ class TextToSpeech:
         segments: List[SubtitleSegment], 
         translated_texts: Optional[List[str]] = None,
         audio_path: Optional[Path] = None,
-        analyze_style: bool = True
+        analyze_style: bool = True,
+        target_language: str = "ja"
     ) -> TTSResult:
         """セグメントごとに音声を生成
         
@@ -240,6 +225,7 @@ class TextToSpeech:
             translated_texts: 翻訳されたテキストのリスト（オプション）
             audio_path: 元の音声ファイルのパス（スタイル分析用）
             analyze_style: 音声スタイルを分析するかどうか
+            target_language: ターゲット言語コード
         """
         console.print("[bold blue]日本語音声を生成中...[/bold blue]")
 
@@ -322,7 +308,7 @@ class TextToSpeech:
             style_params = style_params_cache.get(idx)
 
             # 非同期タスクを作成
-            task = self.generate_speech_segment(text, segment_audio_path, style_params)
+            task = self.generate_speech_segment(text, segment_audio_path, style_params, target_language)
             tasks.append((idx, segment, segment_audio_path, task, text))
 
         # すべてのタスクを並列実行
@@ -464,7 +450,8 @@ class TextToSpeech:
         segments: List[SubtitleSegment], 
         translated_texts: Optional[List[str]] = None,
         audio_path: Optional[Path] = None,
-        analyze_style: bool = True
+        analyze_style: bool = True,
+        target_language: str = "ja"
     ) -> TTSResult:
         """同期的に音声を生成（メインエントリポイント）
         
@@ -473,11 +460,12 @@ class TextToSpeech:
             translated_texts: 翻訳されたテキストのリスト（オプション）
             audio_path: 元の音声ファイルのパス（スタイル分析用）
             analyze_style: 音声スタイルを分析するかどうか
+            target_language: ターゲット言語コード
         """
         # 非同期関数を同期的に実行
         return asyncio.run(
             self.generate_speech_for_segments(
-                segments, translated_texts, audio_path, analyze_style
+                segments, translated_texts, audio_path, analyze_style, target_language
             )
         )
     
@@ -529,3 +517,238 @@ class TextToSpeech:
     def generate(self, request: TTSRequest) -> TTSResult:
         """TTSRequestから音声を生成（同期）"""
         return asyncio.run(self.generate_async(request))
+    
+    def _get_style_descriptions(self, language: str) -> Dict[str, str]:
+        """言語に応じたスタイル記述を取得"""
+        if language == "ja":
+            return {
+                "cheerful": "明るく楽しい",
+                "sad": "悲しい",
+                "angry": "怒った",
+                "worried": "心配そうな",
+                "excited": "興奮した",
+                "dissatisfied": "不満そうな",
+                "confident": "自信に満ちた",
+                "neutral": "中立的な"
+            }
+        elif language == "zh":
+            return {
+                "cheerful": "愉快开朗",
+                "sad": "悲伤",
+                "angry": "愤怒",
+                "worried": "担心",
+                "excited": "兴奋",
+                "dissatisfied": "不满",
+                "confident": "自信",
+                "neutral": "中性"
+            }
+        elif language == "ko":
+            return {
+                "cheerful": "밝고 즐거운",
+                "sad": "슬픈",
+                "angry": "화난",
+                "worried": "걱정스러운",
+                "excited": "흥분한",
+                "dissatisfied": "불만스러운",
+                "confident": "자신감 있는",
+                "neutral": "중립적인"
+            }
+        else:  # Default to English
+            return {
+                "cheerful": "cheerful and happy",
+                "sad": "sad",
+                "angry": "angry",
+                "worried": "worried",
+                "excited": "excited",
+                "dissatisfied": "dissatisfied",
+                "confident": "confident",
+                "neutral": "neutral"
+            }
+    
+    def _get_intensity_modifiers(self, language: str) -> Dict[str, str]:
+        """言語に応じた強度修飾子を取得"""
+        if language == "ja":
+            return {
+                "weak": "少し",
+                "moderate": "",
+                "strong": "とても"
+            }
+        elif language == "zh":
+            return {
+                "weak": "稍微",
+                "moderate": "",
+                "strong": "非常"
+            }
+        elif language == "ko":
+            return {
+                "weak": "약간",
+                "moderate": "",
+                "strong": "매우"
+            }
+        else:  # Default to English
+            return {
+                "weak": "slightly",
+                "moderate": "",
+                "strong": "very"
+            }
+    
+    def _get_speed_modifiers(self, language: str) -> Dict[str, str]:
+        """言語に応じた速度修飾子を取得"""
+        if language == "ja":
+            return {
+                "slow": "ゆっくりと",
+                "fast": "速く"
+            }
+        elif language == "zh":
+            return {
+                "slow": "慢慢地",
+                "fast": "快速地"
+            }
+        elif language == "ko":
+            return {
+                "slow": "천천히",
+                "fast": "빠르게"
+            }
+        else:  # Default to English
+            return {
+                "slow": "slowly",
+                "fast": "quickly"
+            }
+    
+    def _build_style_prompt(self, language: str, speed_modifier: str, 
+                           intensity_modifier: str, style_desc: str) -> str:
+        """言語に応じたスタイルプロンプトを構築"""
+        if language == "ja":
+            parts = []
+            if speed_modifier:
+                parts.append(f"{speed_modifier}")
+            if intensity_modifier:
+                parts.append(f"{intensity_modifier}{style_desc}口調で")
+            else:
+                parts.append(f"{style_desc}口調で")
+            parts.append("次のテキストを読んでください：")
+            return " ".join(parts) + "\n\n"
+        
+        elif language == "zh":
+            parts = []
+            if speed_modifier:
+                parts.append(f"{speed_modifier}")
+            parts.append("用")
+            if intensity_modifier:
+                parts.append(f"{intensity_modifier}{style_desc}的语气")
+            else:
+                parts.append(f"{style_desc}的语气")
+            parts.append("朗读以下文本：")
+            return "".join(parts) + "\n\n"
+        
+        elif language == "ko":
+            parts = []
+            if speed_modifier:
+                parts.append(f"{speed_modifier}")
+            if intensity_modifier:
+                parts.append(f"{intensity_modifier} {style_desc} 톤으로")
+            else:
+                parts.append(f"{style_desc} 톤으로")
+            parts.append("다음 텍스트를 읽어주세요:")
+            return " ".join(parts) + "\n\n"
+        
+        else:  # Default to English
+            parts = []
+            if speed_modifier:
+                parts.append(f"Read {speed_modifier}")
+            else:
+                parts.append("Read")
+            parts.append("the following text in a")
+            if intensity_modifier:
+                parts.append(f"{intensity_modifier} {style_desc}")
+            else:
+                parts.append(style_desc)
+            parts.append("tone:")
+            return " ".join(parts) + "\n\n"
+    
+    async def generate_speech_with_prompt(
+        self,
+        prompt: str,
+        output_path: Path
+    ) -> Optional[Path]:
+        """プロンプトを直接使用して音声生成
+        
+        Args:
+            prompt: TTSプロンプト（ターゲットテキストを含む）
+            output_path: 出力パス
+        """
+        try:
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(text=prompt),
+                    ],
+                ),
+            ]
+            
+            generate_content_config = types.GenerateContentConfig(
+                temperature=1,
+                response_modalities=["audio"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                            voice_name=self.voice_name
+                        )
+                    )
+                ),
+            )
+
+            # ストリーミングで音声を生成（リトライ機能付き）
+            max_retries = 3
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                try:
+                    audio_data = bytearray()
+                    mime_type = None
+                    
+                    for chunk in self.client.models.generate_content_stream(
+                        model=self.model,
+                        contents=contents,
+                        config=generate_content_config,
+                    ):
+                        if (chunk.candidates is None or 
+                            chunk.candidates[0].content is None or 
+                            chunk.candidates[0].content.parts is None):
+                            continue
+                            
+                        part = chunk.candidates[0].content.parts[0]
+                        if part.inline_data and part.inline_data.data:
+                            audio_data.extend(part.inline_data.data)
+                            if mime_type is None:
+                                mime_type = part.inline_data.mime_type
+
+                    if audio_data and mime_type:
+                        # WAVファイルとして保存
+                        wav_data = self.convert_to_wav(bytes(audio_data), mime_type)
+                        with open(output_path, "wb") as f:
+                            f.write(wav_data)
+                        return output_path
+                    
+                    # 音声データが生成されなかった場合もリトライ
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        console.print(f"[yellow]音声データが生成されませんでした。リトライ {retry_count}/{max_retries}[/yellow]")
+                        import asyncio
+                        await asyncio.sleep(1)
+                    
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        console.print(f"[yellow]Gemini TTS エラー: {str(e)}. リトライ {retry_count}/{max_retries}[/yellow]")
+                        import asyncio
+                        await asyncio.sleep(1)
+                    else:
+                        raise
+            
+            return None
+
+        except Exception as e:
+            console.print(f"[bold red]音声生成エラー: {str(e)}[/bold red]")
+            return None

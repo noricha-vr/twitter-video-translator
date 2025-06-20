@@ -225,5 +225,5 @@ def call_api_with_retry(func, max_retries: int = 3) -> Optional[Any]:
 
 - [Groq Documentation](https://console.groq.com/docs)
 - [Gemini API Documentation](https://ai.google.dev/gemini-api/docs)
-- [Google AI Studio](https://makersuite.google.com/)
+- [Gemini Speech Generation Documentation](https://ai.google.dev/gemini-api/docs/speech-generation?hl=ja)
 - [料金計算ツール](https://ai.google.dev/pricing)

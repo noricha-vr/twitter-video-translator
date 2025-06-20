@@ -19,6 +19,7 @@ from .services.downloader import VideoDownloader
 from .services.transcriber import AudioTranscriber
 from .services.translator import TextTranslator
 from .services.tts import TextToSpeech
+from .services.tts_with_prompts import TextToSpeechWithPrompts
 from .services.video_composer import VideoComposer
 from .utils.subtitle import SubtitleGenerator
 from .utils.logger import logger, console
@@ -98,16 +99,17 @@ class VideoTranslatorCLI:
             if use_tts:
                 logger.info(f"音声生成開始: 音声={voice}")
                 # TTSを初期化（音声パラメータを設定）
-                self.tts = TextToSpeech()
+                # 新しいプロンプト方式を使用
+                self.tts = TextToSpeechWithPrompts()
                 self.tts.voice_name = voice
                 # 翻訳されたテキストを抽出
                 translated_texts = [seg.text for seg in translated_segments]
-                # 音声スタイル分析を有効にして音声生成
+                # 音声スタイル分析を有効にして音声生成（新しいプロンプト方式）
                 tts_result = self.tts.generate_speech(
                     transcription.segments,  # 元の文字起こしセグメント
                     translated_texts,        # 翻訳されたテキスト
                     audio_path,             # 元の音声ファイル
-                    analyze_style=True      # スタイル分析を有効化
+                    target_language=target_language  # ターゲット言語
                 )
                 if tts_result.segments and any("audio_path" in seg for seg in tts_result.segments):
                     audio_file = config.temp_dir / "translated_audio.wav"
